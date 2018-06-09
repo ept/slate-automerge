@@ -9,7 +9,8 @@
     "react-dom": "^16.4.0",
     "react-scripts": "1.1.4",
     "slate": "file:../slate/packages/slate",
-    "slate-react": "^0.12.6"
+    "slate-react": "^0.12.6",
+    "uuid": "^3.2.1"
   },
   "scripts": {
     "start": "react-scripts start",
