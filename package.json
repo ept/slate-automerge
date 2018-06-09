@@ -3,9 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "automerge": "^0.7.9",
+    "immutable": "^3.8.2",
     "react": "^16.4.0",
     "react-dom": "^16.4.0",
-    "react-scripts": "1.1.4"
+    "react-scripts": "1.1.4",
+    "slate": "file:../slate/packages/slate",
+    "slate-react": "^0.12.6"
   },
   "scripts": {
     "start": "react-scripts start",
