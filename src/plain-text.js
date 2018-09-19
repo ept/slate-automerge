@@ -1,109 +1,7 @@
 import Plain from 'slate-plain-serializer'
-import { Block, Document, Inline, Leaf, Node, Text, Value } from 'slate'
+import { Value } from 'slate'
 import { Editor } from 'slate-react'
-import { List, Map } from 'immutable'
-import Automerge from 'automerge'
 import React from 'react'
-
-class AutomergeBlock extends Block {
-  static fromAutomerge(object) {
-    if (Block.isBlock(object)) {
-      return object
-    }
-
-    const { data = {}, isVoid = false, nodes = [], type } = object
-    const key = object._objectId
-
-    if (typeof type !== 'string') {
-      throw new Error('`AutomergeBlock.fromAutomerge` requires a `type` string.')
-    }
-
-    return new AutomergeBlock({
-      key,
-      type,
-      isVoid: !!isVoid,
-      data: new Map(data),
-      nodes: new List(nodes.map(AutomergeNode.fromAutomerge)),
-    })
-  }
-}
-
-class AutomergeInline extends Inline {
-  static fromAutomerge(object) {
-    if (Inline.isInline(object)) {
-      return object
-    }
-
-    const { data = {}, isVoid = false, nodes = [], type } = object
-    const key = object._objectId
-
-    if (typeof type !== 'string') {
-      throw new Error('`AutomergeInline.fromAutomerge` requires a `type` string.')
-    }
-
-    return new AutomergeInline({
-      key,
-      type,
-      isVoid: !!isVoid,
-      data: new Map(data),
-      nodes: new List(nodes.map(AutomergeNode.fromAutomerge)),
-    })
-  }
-}
-
-class AutomergeText extends Text {
-  static fromAutomerge(object) {
-    if (Text.isText(object)) {
-      return object
-    }
-
-    const { leaves = [] } = object
-    const key = object._objectId
-
-    const characters = leaves
-      .map(Leaf.fromJSON)
-      .reduce((l, r) => l.concat(r.getCharacters()), new List())
-
-    return new AutomergeText({ characters, key })
-  }
-}
-
-class AutomergeNode extends Node {
-  static fromAutomerge(value) {
-    switch (value.object) {
-      case 'block':
-        return AutomergeBlock.fromAutomerge(value)
-      case 'document':
-        return AutomergeDocument.fromAutomerge(value)
-      case 'inline':
-        return AutomergeInline.fromAutomerge(value)
-      case 'text':
-        return AutomergeText.fromAutomerge(value)
-      default: {
-        throw new Error(
-          `\`AutomergeNode.fromAutomerge\` requires an \`object\` of either 'block', 'document', 'inline' or 'text', but you passed: ${value}`
-        )
-      }
-    }
-  }
-}
-
-class AutomergeDocument extends Document {
-  static fromAutomerge(object) {
-    if (Document.isDocument(object)) {
-      return object
-    }
-
-    const { data = {}, nodes = [] } = object
-    const key = object._objectId
-
-    return new AutomergeDocument({
-      key,
-      data: new Map(data),
-      nodes: new List(nodes.map(AutomergeNode.fromAutomerge)),
-    })
-  }
-}
 
 class AutomergeValue extends Value {
   constructor(value) {
@@ -114,15 +12,72 @@ class AutomergeValue extends Value {
   }
 
   static fromJSON(object, options = {}) {
-    let { data, document, selection, schema } = Value.fromJSON(object, options)
-    const automergeDoc = Automerge.change(Automerge.init(), doc => doc.document = object.document)
-    document = AutomergeDocument.fromAutomerge(automergeDoc.document)
-    return new AutomergeValue({ data, document, selection, schema })
+    return new AutomergeValue(Value.fromJSON(object, options))
   }
 
-  applyOperation(operation) {
-    console.log('applyOperation', operation.toString())
-    return new AutomergeValue(super.applyOperation(operation))
+  addMark(path, offset, length, mark) {
+    console.log('addMark', path, offset, length, mark)
+    return new AutomergeValue(super.addMark(path, offset, length, mark))
+  }
+
+  insertNode(path, node) {
+    console.log('insertNode', path, node)
+    return new AutomergeValue(super.insertNode(path, node))
+  }
+
+  insertText(path, offset, text, marks) {
+    console.log('insertText', path, offset, text, marks)
+    return new AutomergeValue(super.insertText(path, offset, text, marks))
+  }
+
+  mergeNode(path) {
+    console.log('mergeNode', path)
+    return new AutomergeValue(super.mergeNode(path))
+  }
+
+  moveNode(path, newPath, newIndex = 0) {
+    console.log('moveNode', path, newPath, newIndex)
+    return new AutomergeValue(super.moveNode(path, newPath, newIndex))
+  }
+
+  removeMark(path, offset, length, mark) {
+    console.log('removeMark', path, offset, length, mark)
+    return new AutomergeValue(super.removeMark(path, offset, length, mark))
+  }
+
+  removeNode(path) {
+    console.log('removeNode', path)
+    return new AutomergeValue(super.removeNode(path))
+  }
+
+  removeText(path, offset, text) {
+    console.log('removeText', path, offset, text)
+    return new AutomergeValue(super.removeText(path, offset, text))
+  }
+
+  setNode(path, properties) {
+    console.log('setNode', path, properties)
+    return new AutomergeValue(super.setNode(path, properties))
+  }
+
+  setMark(path, offset, length, mark, properties) {
+    console.log('setMark', path, offset, length, mark, properties)
+    return new AutomergeValue(super.setMark(path, offset, length, mark, properties))
+  }
+
+  setProperties(properties) {
+    console.log('setProperties', properties)
+    return new AutomergeValue(super.setProperties(properties))
+  }
+
+  setSelection(properties) {
+    console.log('setSelection', properties)
+    return new AutomergeValue(super.setSelection(properties))
+  }
+
+  splitNode(path, position, properties) {
+    console.log('splitNode', path, position, properties)
+    return new AutomergeValue(super.splitNode(path, position, properties))
   }
 
   set(key, value) {
@@ -139,7 +94,7 @@ export default class PlainText extends React.Component {
   }
 
   onChange = ({ value }) => {
-    console.log('setting state:', value)
+    //console.log('setting state:', value)
     this.setState({ value })
   }
 
