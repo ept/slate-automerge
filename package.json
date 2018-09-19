@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "automerge": "^0.7.9",
+    "automerge": "^0.9.0",
     "immutable": "^3.8.2",
     "react": "^16.4.0",
     "react-dom": "^16.4.0",
     "react-scripts": "1.1.4",
-    "slate": "file:../slate/packages/slate",
-    "slate-react": "^0.12.6",
+    "slate": "^0.40.2",
+    "slate-react": "^0.18.5",
     "uuid": "^3.2.1"
   },
   "scripts": {
