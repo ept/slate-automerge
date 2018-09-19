@@ -2,19 +2,20 @@ import Plain from 'slate-plain-serializer'
 import { Block, Document, Inline, Leaf, Node, Text, Value } from 'slate'
 import { Editor } from 'slate-react'
 import { List, Map } from 'immutable'
+import Automerge from 'automerge'
 import React from 'react'
-import uuid from 'uuid/v4'
 
 class AutomergeBlock extends Block {
-  static fromJSON(object) {
+  static fromAutomerge(object) {
     if (Block.isBlock(object)) {
       return object
     }
 
-    const { data = {}, isVoid = false, key = uuid(), nodes = [], type } = object
+    const { data = {}, isVoid = false, nodes = [], type } = object
+    const key = object._objectId
 
     if (typeof type !== 'string') {
-      throw new Error('`AutomergeBlock.fromJSON` requires a `type` string.')
+      throw new Error('`AutomergeBlock.fromAutomerge` requires a `type` string.')
     }
 
     return new AutomergeBlock({
@@ -22,21 +23,22 @@ class AutomergeBlock extends Block {
       type,
       isVoid: !!isVoid,
       data: new Map(data),
-      nodes: new List(nodes.map(AutomergeNode.fromJSON)),
+      nodes: new List(nodes.map(AutomergeNode.fromAutomerge)),
     })
   }
 }
 
 class AutomergeInline extends Inline {
-  static fromJSON(object) {
+  static fromAutomerge(object) {
     if (Inline.isInline(object)) {
       return object
     }
 
-    const { data = {}, isVoid = false, key = uuid(), nodes = [], type } = object
+    const { data = {}, isVoid = false, nodes = [], type } = object
+    const key = object._objectId
 
     if (typeof type !== 'string') {
-      throw new Error('`AutomergeInline.fromJSON` requires a `type` string.')
+      throw new Error('`AutomergeInline.fromAutomerge` requires a `type` string.')
     }
 
     return new AutomergeInline({
@@ -44,18 +46,19 @@ class AutomergeInline extends Inline {
       type,
       isVoid: !!isVoid,
       data: new Map(data),
-      nodes: new List(nodes.map(AutomergeNode.fromJSON)),
+      nodes: new List(nodes.map(AutomergeNode.fromAutomerge)),
     })
   }
 }
 
 class AutomergeText extends Text {
-  static fromJSON(object) {
+  static fromAutomerge(object) {
     if (Text.isText(object)) {
       return object
     }
 
-    const { leaves = [], key = uuid() } = object
+    const { leaves = [] } = object
+    const key = object._objectId
 
     const characters = leaves
       .map(Leaf.fromJSON)
@@ -66,19 +69,19 @@ class AutomergeText extends Text {
 }
 
 class AutomergeNode extends Node {
-  static fromJSON(value) {
+  static fromAutomerge(value) {
     switch (value.object) {
       case 'block':
-        return AutomergeBlock.fromJSON(value)
+        return AutomergeBlock.fromAutomerge(value)
       case 'document':
-        return AutomergeDocument.fromJSON(value)
+        return AutomergeDocument.fromAutomerge(value)
       case 'inline':
-        return AutomergeInline.fromJSON(value)
+        return AutomergeInline.fromAutomerge(value)
       case 'text':
-        return AutomergeText.fromJSON(value)
+        return AutomergeText.fromAutomerge(value)
       default: {
         throw new Error(
-          `\`AutomergeNode.fromJSON\` requires an \`object\` of either 'block', 'document', 'inline' or 'text', but you passed: ${value}`
+          `\`AutomergeNode.fromAutomerge\` requires an \`object\` of either 'block', 'document', 'inline' or 'text', but you passed: ${value}`
         )
       }
     }
@@ -86,17 +89,18 @@ class AutomergeNode extends Node {
 }
 
 class AutomergeDocument extends Document {
-  static fromJSON(object) {
+  static fromAutomerge(object) {
     if (Document.isDocument(object)) {
       return object
     }
 
-    const { data = {}, key = uuid(), nodes = [] } = object
+    const { data = {}, nodes = [] } = object
+    const key = object._objectId
 
     return new AutomergeDocument({
       key,
       data: new Map(data),
-      nodes: new List(nodes.map(AutomergeNode.fromJSON)),
+      nodes: new List(nodes.map(AutomergeNode.fromAutomerge)),
     })
   }
 }
@@ -111,7 +115,8 @@ class AutomergeValue extends Value {
 
   static fromJSON(object, options = {}) {
     let { data, document, selection, schema } = Value.fromJSON(object, options)
-    document = AutomergeDocument.fromJSON(object.document)
+    const automergeDoc = Automerge.change(Automerge.init(), doc => doc.document = object.document)
+    document = AutomergeDocument.fromAutomerge(automergeDoc.document)
     return new AutomergeValue({ data, document, selection, schema })
   }
 
