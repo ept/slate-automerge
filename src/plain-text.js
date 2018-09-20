@@ -1,9 +1,117 @@
 import Plain from 'slate-plain-serializer'
-import { Value } from 'slate'
+import { Block, Document, Inline, Leaf, Text, Value } from 'slate'
 import { Editor } from 'slate-react'
 import React from 'react'
 
-class AutomergeValue extends Value {
+function nodeFromJSON(node) {
+  switch (node.object) {
+    case 'block':
+      return AMBlock.fromJSON(node)
+    case 'document':
+      return AMDocument.fromJSON(node)
+    case 'inline':
+      return AMInline.fromJSON(node)
+    case 'text':
+      return AMText.fromJSON(node)
+    default:
+      throw new Error('nodeFromJSON requires an `object` property')
+  }
+}
+
+class AMBlock extends Block {
+  constructor(block) {
+    // Deconstruct value since otherwise the Immutable.Record constructor
+    // short-circuits object creation if value instanceof RecordType
+    const { data, key, nodes, type } = block
+    super({ data, key, nodes, type })
+  }
+
+  static fromJSON(object) {
+    let { data, key, nodes, type } = Block.fromJSON(object)
+    nodes = nodes.map(nodeFromJSON)
+    return new AMBlock({ data, key, nodes, type })
+  }
+
+  set(key, value) {
+    return new AMBlock(super.set(key, value))
+  }
+}
+
+class AMInline extends Inline {
+  constructor(inline) {
+    // Deconstruct value since otherwise the Immutable.Record constructor
+    // short-circuits object creation if value instanceof RecordType
+    const { data, key, nodes, type } = inline
+    super({ data, key, nodes, type })
+  }
+
+  static fromJSON(object) {
+    let { data, key, nodes, type } = Inline.fromJSON(object)
+    nodes = nodes.map(nodeFromJSON)
+    return new AMInline({ data, key, nodes, type })
+  }
+
+  set(key, value) {
+    return new AMInline(super.set(key, value))
+  }
+}
+
+class AMText extends Text {
+  constructor(text) {
+    // Deconstruct value since otherwise the Immutable.Record constructor
+    // short-circuits object creation if value instanceof RecordType
+    const { leaves, key } = text
+    super({ leaves, key })
+  }
+
+  static fromJSON(object) {
+    let { leaves, key } = Text.fromJSON(object)
+    leaves = leaves.map(AMLeaf.fromJSON)
+    return new AMText({ leaves, key })
+  }
+
+  set(key, value) {
+    return new AMText(super.set(key, value))
+  }
+}
+
+class AMLeaf extends Leaf {
+  constructor(leaf) {
+    // Deconstruct value since otherwise the Immutable.Record constructor
+    // short-circuits object creation if value instanceof RecordType
+    const { marks, text } = leaf
+    super({ marks, text })
+  }
+
+  static fromJSON(object) {
+    return new AMLeaf(Leaf.fromJSON(object))
+  }
+
+  set(key, value) {
+    return new AMLeaf(super.set(key, value))
+  }
+}
+
+class AMDocument extends Document {
+  constructor(doc) {
+    // Deconstruct value since otherwise the Immutable.Record constructor
+    // short-circuits object creation if value instanceof RecordType
+    const { data, key, nodes } = doc
+    super({ data, key, nodes })
+  }
+
+  static fromJSON(object) {
+    let { data, key, nodes } = Document.fromJSON(object)
+    nodes = nodes.map(nodeFromJSON)
+    return new AMDocument({ data, key, nodes })
+  }
+
+  set(key, value) {
+    return new AMDocument(super.set(key, value))
+  }
+}
+
+class AMValue extends Value {
   constructor(value) {
     // Deconstruct value since otherwise the Immutable.Record constructor
     // short-circuits object creation if value instanceof RecordType
@@ -12,82 +120,89 @@ class AutomergeValue extends Value {
   }
 
   static fromJSON(object, options = {}) {
-    return new AutomergeValue(Value.fromJSON(object, options))
+    let { data, decorations, document, history, schema, selection } = Value.fromJSON(object, options)
+    document = AMDocument.fromJSON(document)
+    return new AMValue({ data, decorations, document, history, schema, selection })
   }
 
   addMark(path, offset, length, mark) {
     console.log('addMark', path, offset, length, mark)
-    return new AutomergeValue(super.addMark(path, offset, length, mark))
+    return new AMValue(super.addMark(path, offset, length, mark))
   }
 
   insertNode(path, node) {
     console.log('insertNode', path, node)
-    return new AutomergeValue(super.insertNode(path, node))
+    return new AMValue(super.insertNode(path, node))
   }
 
   insertText(path, offset, text, marks) {
-    console.log('insertText', path, offset, text, marks)
-    return new AutomergeValue(super.insertText(path, offset, text, marks))
+    const pathLog = path.toJS ? path.toJS() : path
+    const marksLog = marks.toJS ? marks.toJS() : marks
+    console.log('insertText', pathLog, ',', offset, ',', text, ',', marksLog)
+    return new AMValue(super.insertText(path, offset, text, marks))
   }
 
   mergeNode(path) {
-    console.log('mergeNode', path)
-    return new AutomergeValue(super.mergeNode(path))
+    const pathLog = path.toJS ? path.toJS() : path
+    console.log('mergeNode', pathLog)
+    return new AMValue(super.mergeNode(path))
   }
 
   moveNode(path, newPath, newIndex = 0) {
     console.log('moveNode', path, newPath, newIndex)
-    return new AutomergeValue(super.moveNode(path, newPath, newIndex))
+    return new AMValue(super.moveNode(path, newPath, newIndex))
   }
 
   removeMark(path, offset, length, mark) {
     console.log('removeMark', path, offset, length, mark)
-    return new AutomergeValue(super.removeMark(path, offset, length, mark))
+    return new AMValue(super.removeMark(path, offset, length, mark))
   }
 
   removeNode(path) {
     console.log('removeNode', path)
-    return new AutomergeValue(super.removeNode(path))
+    return new AMValue(super.removeNode(path))
   }
 
   removeText(path, offset, text) {
-    console.log('removeText', path, offset, text)
-    return new AutomergeValue(super.removeText(path, offset, text))
+    const pathLog = path.toJS ? path.toJS() : path
+    console.log('removeText', pathLog, ',', offset, ',', text)
+    return new AMValue(super.removeText(path, offset, text))
   }
 
   setNode(path, properties) {
     console.log('setNode', path, properties)
-    return new AutomergeValue(super.setNode(path, properties))
+    return new AMValue(super.setNode(path, properties))
   }
 
   setMark(path, offset, length, mark, properties) {
     console.log('setMark', path, offset, length, mark, properties)
-    return new AutomergeValue(super.setMark(path, offset, length, mark, properties))
+    return new AMValue(super.setMark(path, offset, length, mark, properties))
   }
 
   setProperties(properties) {
     console.log('setProperties', properties)
-    return new AutomergeValue(super.setProperties(properties))
+    return new AMValue(super.setProperties(properties))
   }
 
   setSelection(properties) {
     console.log('setSelection', properties)
-    return new AutomergeValue(super.setSelection(properties))
+    return new AMValue(super.setSelection(properties))
   }
 
   splitNode(path, position, properties) {
-    console.log('splitNode', path, position, properties)
-    return new AutomergeValue(super.splitNode(path, position, properties))
+    const pathLog = path.toJS ? path.toJS() : path
+    console.log('splitNode', pathLog, ',', position, ',', properties)
+    return new AMValue(super.splitNode(path, position, properties))
   }
 
   set(key, value) {
-    return new AutomergeValue(super.set(key, value))
+    return new AMValue(super.set(key, value))
   }
 }
 
 export default class PlainText extends React.Component {
   state = {
-    value: AutomergeValue.fromJSON(Plain.deserialize(
+    value: AMValue.fromJSON(Plain.deserialize(
       'This is editable plain text, just like a <textarea>!',
       {toJSON: true}
     )),
