@@ -3,7 +3,12 @@ import { Block, Document, Inline, Leaf, Text, Value } from 'slate'
 import { Editor } from 'slate-react'
 import React from 'react'
 
-function nodeFromJSON(node) {
+function createNode(node) {
+  if (node instanceof AMBlock || node instanceof AMDocument ||
+      node instanceof AMInline || node instanceof AMText) {
+    return node
+  }
+
   switch (node.object) {
     case 'block':
       return AMBlock.fromJSON(node)
@@ -14,7 +19,7 @@ function nodeFromJSON(node) {
     case 'text':
       return AMText.fromJSON(node)
     default:
-      throw new Error('nodeFromJSON requires an `object` property')
+      throw new Error('createNode requires an `object` property')
   }
 }
 
@@ -28,11 +33,14 @@ class AMBlock extends Block {
 
   static fromJSON(object) {
     let { data, key, nodes, type } = Block.fromJSON(object)
-    nodes = nodes.map(nodeFromJSON)
+    nodes = nodes.map(createNode)
     return new AMBlock({ data, key, nodes, type })
   }
 
   set(key, value) {
+    if (key === 'nodes') {
+      value = value.map(createNode)
+    }
     return new AMBlock(super.set(key, value))
   }
 }
@@ -47,11 +55,14 @@ class AMInline extends Inline {
 
   static fromJSON(object) {
     let { data, key, nodes, type } = Inline.fromJSON(object)
-    nodes = nodes.map(nodeFromJSON)
+    nodes = nodes.map(createNode)
     return new AMInline({ data, key, nodes, type })
   }
 
   set(key, value) {
+    if (key === 'nodes') {
+      value = value.map(createNode)
+    }
     return new AMInline(super.set(key, value))
   }
 }
@@ -71,6 +82,9 @@ class AMText extends Text {
   }
 
   set(key, value) {
+    if (key === 'leaves') {
+      value = value.map(AMLeaf.create)
+    }
     return new AMText(super.set(key, value))
   }
 }
@@ -80,11 +94,20 @@ class AMLeaf extends Leaf {
     // Deconstruct value since otherwise the Immutable.Record constructor
     // short-circuits object creation if value instanceof RecordType
     const { marks, text } = leaf
+    //console.log('leaf:', text)
     super({ marks, text })
   }
 
   static fromJSON(object) {
     return new AMLeaf(Leaf.fromJSON(object))
+  }
+
+  static create(object) {
+    if (object instanceof AMLeaf) {
+      return object
+    } else {
+      return new AMLeaf(object)
+    }
   }
 
   set(key, value) {
@@ -102,11 +125,22 @@ class AMDocument extends Document {
 
   static fromJSON(object) {
     let { data, key, nodes } = Document.fromJSON(object)
-    nodes = nodes.map(nodeFromJSON)
+    nodes = nodes.map(createNode)
     return new AMDocument({ data, key, nodes })
   }
 
+  static create(object) {
+    if (object instanceof AMDocument) {
+      return object
+    } else {
+      return new AMDocument(object)
+    }
+  }
+
   set(key, value) {
+    if (key === 'nodes') {
+      value = value.map(createNode)
+    }
     return new AMDocument(super.set(key, value))
   }
 }
@@ -125,78 +159,89 @@ class AMValue extends Value {
     return new AMValue({ data, decorations, document, history, schema, selection })
   }
 
+  static create(object) {
+    if (object instanceof AMValue) {
+      return object
+    } else {
+      return new AMValue(object)
+    }
+  }
+
   addMark(path, offset, length, mark) {
     console.log('addMark', path, offset, length, mark)
-    return new AMValue(super.addMark(path, offset, length, mark))
+    return AMValue.create(super.addMark(path, offset, length, mark))
   }
 
   insertNode(path, node) {
     console.log('insertNode', path, node)
-    return new AMValue(super.insertNode(path, node))
+    return AMValue.create(super.insertNode(path, node))
   }
 
   insertText(path, offset, text, marks) {
     const pathLog = path.toJS ? path.toJS() : path
     const marksLog = marks.toJS ? marks.toJS() : marks
     console.log('insertText', pathLog, ',', offset, ',', text, ',', marksLog)
-    return new AMValue(super.insertText(path, offset, text, marks))
+    return AMValue.create(super.insertText(path, offset, text, marks))
   }
 
   mergeNode(path) {
     const pathLog = path.toJS ? path.toJS() : path
     console.log('mergeNode', pathLog)
-    return new AMValue(super.mergeNode(path))
+    return AMValue.create(super.mergeNode(path))
   }
 
   moveNode(path, newPath, newIndex = 0) {
     console.log('moveNode', path, newPath, newIndex)
-    return new AMValue(super.moveNode(path, newPath, newIndex))
+    return AMValue.create(super.moveNode(path, newPath, newIndex))
   }
 
   removeMark(path, offset, length, mark) {
     console.log('removeMark', path, offset, length, mark)
-    return new AMValue(super.removeMark(path, offset, length, mark))
+    return AMValue.create(super.removeMark(path, offset, length, mark))
   }
 
   removeNode(path) {
     console.log('removeNode', path)
-    return new AMValue(super.removeNode(path))
+    return AMValue.create(super.removeNode(path))
   }
 
   removeText(path, offset, text) {
     const pathLog = path.toJS ? path.toJS() : path
     console.log('removeText', pathLog, ',', offset, ',', text)
-    return new AMValue(super.removeText(path, offset, text))
+    return AMValue.create(super.removeText(path, offset, text))
   }
 
   setNode(path, properties) {
     console.log('setNode', path, properties)
-    return new AMValue(super.setNode(path, properties))
+    return AMValue.create(super.setNode(path, properties))
   }
 
   setMark(path, offset, length, mark, properties) {
     console.log('setMark', path, offset, length, mark, properties)
-    return new AMValue(super.setMark(path, offset, length, mark, properties))
+    return AMValue.create(super.setMark(path, offset, length, mark, properties))
   }
 
   setProperties(properties) {
     console.log('setProperties', properties)
-    return new AMValue(super.setProperties(properties))
+    return AMValue.create(super.setProperties(properties))
   }
 
   setSelection(properties) {
     console.log('setSelection', properties)
-    return new AMValue(super.setSelection(properties))
+    return AMValue.create(super.setSelection(properties))
   }
 
   splitNode(path, position, properties) {
     const pathLog = path.toJS ? path.toJS() : path
     console.log('splitNode', pathLog, ',', position, ',', properties)
-    return new AMValue(super.splitNode(path, position, properties))
+    return AMValue.create(super.splitNode(path, position, properties))
   }
 
   set(key, value) {
-    return new AMValue(super.set(key, value))
+    if (key === 'document') {
+      value = AMDocument.create(value)
+    }
+    return AMValue.create(super.set(key, value))
   }
 }
 
